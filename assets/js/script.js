@@ -188,6 +188,25 @@
       window.addEventListener('touchend', onTouchEnd);
       window.addEventListener('scroll', onScrollLock);
 
+      // Clicar num link de âncora do menu antes da animação terminar:
+      // conclui a expansão na hora e libera a rolagem até a seção alvo.
+      // A logo é tratada à parte (reseta a animação), por isso é excluída.
+      document.querySelectorAll('a[href^="#"]:not(.logo)').forEach(function (link) {
+        link.addEventListener('click', function () {
+          if (!fullyExpanded) setProgress(1);
+        });
+      });
+
+      // Clicar na logo: volta ao estado anterior à animação (hero recolhido no topo).
+      var logoLink = document.querySelector('.logo');
+      if (logoLink) {
+        logoLink.addEventListener('click', function () {
+          fullyExpanded = false;
+          setProgress(0);
+          window.scrollTo(0, 0);
+        });
+      }
+
       window.addEventListener('resize', function () {
         isMobileHero = window.innerWidth < 768;
         render();
