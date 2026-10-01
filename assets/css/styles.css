@@ -681,9 +681,13 @@ a { text-decoration: none; color: inherit; }
   align-items: stretch;
   gap: 22px;
   width: max-content;
-  padding: 4px 0;
-  animation: reviews-scroll 50s linear infinite;
+  /* o respiro à direita = gap: assim -50% cai exatamente no início da cópia (loop sem tranco) */
+  padding: 4px 22px 4px 0;
+  animation: reviews-scroll 70s linear infinite;
 }
+/* pausa para ler: mouse em cima (desktop) ou dedo encostado (celular, via JS) */
+.reviews-marquee:hover .reviews-track,
+.reviews-marquee.is-paused .reviews-track { animation-play-state: paused; }
 
 @keyframes reviews-scroll {
   from { transform: translateX(0); }
@@ -716,34 +720,22 @@ a { text-decoration: none; color: inherit; }
   .reviews-track { animation: none; flex-wrap: wrap; justify-content: center; }
 }
 
-.reviews-dots { display: none; }
-
-/* Celular: em vez da faixa correndo, um carrossel com um comentário por vez,
-   que avança sozinho (JS) e também pode ser arrastado com o dedo. */
+/* Celular: mesma faixa infinita, com cards mais largos e mais lenta para dar tempo de ler */
 @media (max-width: 767px) {
   .reviews-marquee {
-    position: relative;
     width: auto;
     margin: 0 calc(var(--gutter) * -1);
-    padding: 0 var(--gutter);
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
-    -webkit-mask-image: none;
-            mask-image: none;
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
+            mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
   }
-  .reviews-marquee::-webkit-scrollbar { display: none; }
   .reviews-track {
-    gap: 12px;
-    padding: 0;
-    animation: none;
+    gap: 14px;
+    padding-right: 14px;
+    animation-duration: 110s;
   }
-  .review-card[aria-hidden="true"] { display: none; }
   .review-card {
-    flex: 0 0 calc(100vw - var(--gutter) * 2 - 20px);
-    min-height: 250px;
-    padding: 24px 22px;
-    scroll-snap-align: center;
+    flex: 0 0 min(78vw, 320px);
+    padding: 22px 20px;
   }
   .review-card p {
     display: -webkit-box;
@@ -751,20 +743,6 @@ a { text-decoration: none; color: inherit; }
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-
-  .reviews-dots {
-    display: flex;
-    justify-content: center;
-    gap: 6px;
-    margin-top: 18px;
-  }
-  .reviews-dots span {
-    width: 6px; height: 6px;
-    border-radius: 999px;
-    background: var(--bege-escuro);
-    transition: width .3s ease, background .3s ease;
-  }
-  .reviews-dots span.is-active { width: 18px; background: var(--amarelo); }
 }
 
 /* =========================================================

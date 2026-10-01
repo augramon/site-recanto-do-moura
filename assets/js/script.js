@@ -268,83 +268,18 @@
     }
   }
 
-  /* ---------- Avaliações: carrossel automático no celular ----------
-     No desktop a faixa corre via CSS. No celular cada comentário aparece
-     inteiro, um por vez: avança sozinho a cada 5s, pausa quando a pessoa
-     toca/arrasta e volta ao início depois do último. */
-  var revViewport = document.querySelector('.reviews-marquee');
-  var revDots = document.getElementById('reviewsDots');
-  if (revViewport && revDots) {
-    var revCards = Array.prototype.slice.call(
-      revViewport.querySelectorAll('.review-card:not([aria-hidden="true"])')
-    );
-    var revMobile = window.matchMedia('(max-width: 767px)');
-    var revIndex = 0;
-    var revTimer = null;
+  /* ---------- Avaliações: pausa a faixa infinita enquanto o dedo está nela ---------- */
+  var revMarquee = document.querySelector('.reviews-marquee');
+  if (revMarquee) {
     var revResume = null;
-
-    revCards.forEach(function () { revDots.appendChild(document.createElement('span')); });
-    var dotEls = Array.prototype.slice.call(revDots.children);
-
-    function revSetDot(i) {
-      revIndex = i;
-      dotEls.forEach(function (d, k) { d.classList.toggle('is-active', k === i); });
-    }
-
-    function revGoTo(i) {
-      var card = revCards[i];
-      var vp = revViewport.getBoundingClientRect();
-      var c = card.getBoundingClientRect();
-      revViewport.scrollTo({
-        left: revViewport.scrollLeft + (c.left - vp.left) - (vp.width - c.width) / 2,
-        behavior: prefersReduced ? 'auto' : 'smooth'
-      });
-    }
-
-    // Atualiza o indicador conforme o card mais próximo do centro
-    var revTicking = false;
-    revViewport.addEventListener('scroll', function () {
-      if (revTicking || !revMobile.matches) return;
-      revTicking = true;
-      requestAnimationFrame(function () {
-        var center = revViewport.getBoundingClientRect().left + revViewport.clientWidth / 2;
-        var best = 0, bestDist = Infinity;
-        revCards.forEach(function (card, k) {
-          var r = card.getBoundingClientRect();
-          var d = Math.abs(r.left + r.width / 2 - center);
-          if (d < bestDist) { bestDist = d; best = k; }
-        });
-        revSetDot(best);
-        revTicking = false;
-      });
-    }, { passive: true });
-
-    function revStop() { clearInterval(revTimer); revTimer = null; }
-    function revStart() {
-      revStop();
-      if (!revMobile.matches || prefersReduced) return;
-      revTimer = setInterval(function () {
-        if (document.hidden) return;
-        revGoTo((revIndex + 1) % revCards.length);
-      }, 5000);
-    }
-
-    // Pausa enquanto a pessoa interage; retoma alguns segundos depois
-    revViewport.addEventListener('touchstart', function () {
-      revStop(); clearTimeout(revResume);
-    }, { passive: true });
-    revViewport.addEventListener('touchend', function () {
+    revMarquee.addEventListener('touchstart', function () {
       clearTimeout(revResume);
-      revResume = setTimeout(revStart, 6000);
+      revMarquee.classList.add('is-paused');
+    }, { passive: true });
+    revMarquee.addEventListener('touchend', function () {
+      clearTimeout(revResume);
+      revResume = setTimeout(function () { revMarquee.classList.remove('is-paused'); }, 1500);
     });
-
-    function revApplyMode() {
-      if (revMobile.matches) { revSetDot(0); revStart(); }
-      else { revStop(); }
-    }
-    if (revMobile.addEventListener) revMobile.addEventListener('change', revApplyMode);
-    else if (revMobile.addListener) revMobile.addListener(revApplyMode);
-    revApplyMode();
   }
 
   /* ---------- Ano atual no rodapé ---------- */
