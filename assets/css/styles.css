@@ -685,9 +685,6 @@ a { text-decoration: none; color: inherit; }
   padding: 4px 22px 4px 0;
   animation: reviews-scroll 70s linear infinite;
 }
-/* pausa para ler: mouse em cima (desktop) ou dedo encostado (celular, via JS) */
-.reviews-marquee:hover .reviews-track,
-.reviews-marquee.is-paused .reviews-track { animation-play-state: paused; }
 
 @keyframes reviews-scroll {
   from { transform: translateX(0); }

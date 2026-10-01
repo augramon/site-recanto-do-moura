@@ -268,20 +268,6 @@
     }
   }
 
-  /* ---------- Avaliações: pausa a faixa infinita enquanto o dedo está nela ---------- */
-  var revMarquee = document.querySelector('.reviews-marquee');
-  if (revMarquee) {
-    var revResume = null;
-    revMarquee.addEventListener('touchstart', function () {
-      clearTimeout(revResume);
-      revMarquee.classList.add('is-paused');
-    }, { passive: true });
-    revMarquee.addEventListener('touchend', function () {
-      clearTimeout(revResume);
-      revResume = setTimeout(function () { revMarquee.classList.remove('is-paused'); }, 1500);
-    });
-  }
-
   /* ---------- Ano atual no rodapé ---------- */
   var anoEl = document.getElementById('ano');
   if (anoEl) anoEl.textContent = new Date().getFullYear();
