@@ -60,7 +60,7 @@
   // Imagens entram com "wipe"; demais elementos com leve subida + foco.
   var imgTargets = document.querySelectorAll('.sobre-image, .loc-map');
   var blockTargets = document.querySelectorAll(
-    '.sobre-text, .review-card, .rating-hero, ' +
+    '.sobre-text, .reviews-marquee, .rating-hero, ' +
     '.ambiente-content, .loc-info, .horarios-box, .contato-card, .section-head'
   );
   imgTargets.forEach(function (el) { el.classList.add('reveal-img'); });
@@ -107,7 +107,6 @@
   var prefersReduced = window.matchMedia &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  var heroBg = document.getElementById('heroBg');
   var heroMedia = document.getElementById('heroMedia');
   var heroTitles = document.getElementById('heroTitles');
   var heroAfter = document.getElementById('heroAfter');
@@ -115,21 +114,36 @@
   var heroWord2 = document.getElementById('heroWord2');
   var heroHint = document.getElementById('heroHint');
 
+  var heroSection = document.getElementById('inicio');
+
   if (heroMedia) {
     var progress = 0;            // 0 → 1
     var fullyExpanded = false;
     var touchStartY = 0;
-    var isMobileHero = window.innerWidth < 768;
+    // No celular o efeito não cabe bem: o hero vira uma composição estática
+    // (título, texto, botões e foto empilhados) e a rolagem fica livre.
+    var isStaticHero = window.innerWidth < 768;
+
+    function applyHeroMode() {
+      if (heroSection) heroSection.classList.toggle('hero--static', isStaticHero);
+      if (isStaticHero) {
+        // limpa os estilos inline do efeito para o CSS assumir
+        [heroMedia, heroTitles, heroWord1, heroWord2, heroHint].forEach(function (el) {
+          if (el) el.removeAttribute('style');
+        });
+        if (heroAfter) heroAfter.classList.add('is-visible');
+        fullyExpanded = true;
+      }
+    }
 
     function render() {
-      var wRange = isMobileHero ? 620 : 1200;
-      var hRange = isMobileHero ? 220 : 380;
-      var slide = progress * (isMobileHero ? 42 : 38); // vw que os títulos se afastam
+      if (isStaticHero) return;
+      var wRange = 1200;
+      var hRange = 380;
+      var slide = progress * 38; // vw que os títulos se afastam
 
       heroMedia.style.width = (300 + progress * wRange) + 'px';
       heroMedia.style.height = (420 + progress * hRange) + 'px';
-
-      if (heroBg) heroBg.style.opacity = (1 - progress).toFixed(3);
 
       if (heroTitles) heroTitles.style.opacity = Math.max(0, 1 - progress * 1.15).toFixed(3);
       if (heroWord1) heroWord1.style.transform = 'translateX(-' + slide + 'vw)';
@@ -145,11 +159,14 @@
       render();
     }
 
+    applyHeroMode();
+
     // Acessibilidade: sem hijack para quem prefere menos movimento — já entra expandido.
     if (prefersReduced) {
       setProgress(1);
     } else {
       var onWheel = function (e) {
+        if (isStaticHero) return;
         if (fullyExpanded && e.deltaY < 0 && window.scrollY <= 5) {
           fullyExpanded = false;            // volta a "encolher" ao subir no topo
           e.preventDefault();
@@ -163,7 +180,7 @@
       var onTouchStart = function (e) { touchStartY = e.touches[0].clientY; };
 
       var onTouchMove = function (e) {
-        if (!touchStartY) return;
+        if (isStaticHero || !touchStartY) return;
         var deltaY = touchStartY - e.touches[0].clientY;
         if (fullyExpanded && deltaY < -20 && window.scrollY <= 5) {
           fullyExpanded = false;
@@ -180,7 +197,7 @@
       var onTouchEnd = function () { touchStartY = 0; };
 
       // Enquanto não expandiu, mantém a página travada no topo.
-      var onScrollLock = function () { if (!fullyExpanded) window.scrollTo(0, 0); };
+      var onScrollLock = function () { if (!isStaticHero && !fullyExpanded) window.scrollTo(0, 0); };
 
       window.addEventListener('wheel', onWheel, { passive: false });
       window.addEventListener('touchstart', onTouchStart, { passive: false });
@@ -201,6 +218,7 @@
       var logoLink = document.querySelector('.logo');
       if (logoLink) {
         logoLink.addEventListener('click', function () {
+          if (isStaticHero) return;
           fullyExpanded = false;
           setProgress(0);
           window.scrollTo(0, 0);
@@ -208,7 +226,12 @@
       }
 
       window.addEventListener('resize', function () {
-        isMobileHero = window.innerWidth < 768;
+        var nowStatic = window.innerWidth < 768;
+        if (nowStatic !== isStaticHero) {
+          isStaticHero = nowStatic;
+          if (!isStaticHero) { fullyExpanded = false; progress = 0; }
+          applyHeroMode();
+        }
         render();
       });
 
@@ -243,6 +266,85 @@
         setTimeout(function () { opt.classList.add('in'); }, 180 * i);
       });
     }
+  }
+
+  /* ---------- Avaliações: carrossel automático no celular ----------
+     No desktop a faixa corre via CSS. No celular cada comentário aparece
+     inteiro, um por vez: avança sozinho a cada 5s, pausa quando a pessoa
+     toca/arrasta e volta ao início depois do último. */
+  var revViewport = document.querySelector('.reviews-marquee');
+  var revDots = document.getElementById('reviewsDots');
+  if (revViewport && revDots) {
+    var revCards = Array.prototype.slice.call(
+      revViewport.querySelectorAll('.review-card:not([aria-hidden="true"])')
+    );
+    var revMobile = window.matchMedia('(max-width: 767px)');
+    var revIndex = 0;
+    var revTimer = null;
+    var revResume = null;
+
+    revCards.forEach(function () { revDots.appendChild(document.createElement('span')); });
+    var dotEls = Array.prototype.slice.call(revDots.children);
+
+    function revSetDot(i) {
+      revIndex = i;
+      dotEls.forEach(function (d, k) { d.classList.toggle('is-active', k === i); });
+    }
+
+    function revGoTo(i) {
+      var card = revCards[i];
+      var vp = revViewport.getBoundingClientRect();
+      var c = card.getBoundingClientRect();
+      revViewport.scrollTo({
+        left: revViewport.scrollLeft + (c.left - vp.left) - (vp.width - c.width) / 2,
+        behavior: prefersReduced ? 'auto' : 'smooth'
+      });
+    }
+
+    // Atualiza o indicador conforme o card mais próximo do centro
+    var revTicking = false;
+    revViewport.addEventListener('scroll', function () {
+      if (revTicking || !revMobile.matches) return;
+      revTicking = true;
+      requestAnimationFrame(function () {
+        var center = revViewport.getBoundingClientRect().left + revViewport.clientWidth / 2;
+        var best = 0, bestDist = Infinity;
+        revCards.forEach(function (card, k) {
+          var r = card.getBoundingClientRect();
+          var d = Math.abs(r.left + r.width / 2 - center);
+          if (d < bestDist) { bestDist = d; best = k; }
+        });
+        revSetDot(best);
+        revTicking = false;
+      });
+    }, { passive: true });
+
+    function revStop() { clearInterval(revTimer); revTimer = null; }
+    function revStart() {
+      revStop();
+      if (!revMobile.matches || prefersReduced) return;
+      revTimer = setInterval(function () {
+        if (document.hidden) return;
+        revGoTo((revIndex + 1) % revCards.length);
+      }, 5000);
+    }
+
+    // Pausa enquanto a pessoa interage; retoma alguns segundos depois
+    revViewport.addEventListener('touchstart', function () {
+      revStop(); clearTimeout(revResume);
+    }, { passive: true });
+    revViewport.addEventListener('touchend', function () {
+      clearTimeout(revResume);
+      revResume = setTimeout(revStart, 6000);
+    });
+
+    function revApplyMode() {
+      if (revMobile.matches) { revSetDot(0); revStart(); }
+      else { revStop(); }
+    }
+    if (revMobile.addEventListener) revMobile.addEventListener('change', revApplyMode);
+    else if (revMobile.addListener) revMobile.addListener(revApplyMode);
+    revApplyMode();
   }
 
   /* ---------- Ano atual no rodapé ---------- */
