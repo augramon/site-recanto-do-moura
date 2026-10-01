@@ -683,7 +683,7 @@ a { text-decoration: none; color: inherit; }
   width: max-content;
   /* o respiro à direita = gap: assim -50% cai exatamente no início da cópia (loop sem tranco) */
   padding: 4px 22px 4px 0;
-  animation: reviews-scroll 70s linear infinite;
+  animation: reviews-scroll 45s linear infinite;
 }
 
 @keyframes reviews-scroll {
@@ -728,7 +728,7 @@ a { text-decoration: none; color: inherit; }
   .reviews-track {
     gap: 14px;
     padding-right: 14px;
-    animation-duration: 110s;
+    animation-duration: 65s;
   }
   .review-card {
     flex: 0 0 min(78vw, 320px);
